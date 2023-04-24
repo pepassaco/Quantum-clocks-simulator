@@ -9,18 +9,19 @@ import scipy.stats as stats
 from scipy.optimize import fsolve
 from scipy.special import erf
 from sweep_simulations import sweep_simulations
-
+from dostics_simulations import dostics_simulations
 from relojq import relojq
 from experimentos import experimento_logbook
 import numpy as np
 
 
 
-N = 500
-mu = 1.0
-std = 0.5
-t_fin = 101
-t_res = std/2
+N = 100000
+escalado = 1e0
+mu = 1*escalado
+std = 0.0125*escalado
+t_fin = 10000*escalado
+t_res = 0.1#std/2
 dist = "normal"
 tipo = "coso" 			# sim frac coso
 params = [mu, std]
@@ -33,10 +34,8 @@ def plotter_registro(t, N, registro):
 
 
 	rels_axis = np.linspace(1,N,N)
-	
 
 	fig, ax10 = subplots()
-
 	fig.set_figheight(6)
 	fig.set_figwidth(6)
 
@@ -111,30 +110,36 @@ def plotKs(numTics, mediaK, stdK):
 	#show()
 
 
+def plotDobleTics(numTics):
+
+	misBins = np.arange(0, t_fin/mu)
+	
+	fig, ax10 = subplots()
+	ax10.hist(numTics, bins=misBins)  
+	ax10.set_ylabel(r"Histogram")
+	ax10.set_xlabel(r"Number of tics")
+	for item in ([ax10.title, ax10.xaxis.label, ax10.yaxis.label] + ax10.get_xticklabels() + ax10.get_yticklabels()):
+	      item.set_fontsize(12)
+	ax10.xaxis.set_major_locator(MaxNLocator(6))
+	ax10.yaxis.set_major_locator(MaxNLocator(6))
+	ax10.xaxis.set_minor_locator(AutoMinorLocator())
+	ax10.yaxis.set_minor_locator(AutoMinorLocator())
+	ax10.tick_params(axis='both', which='both', direction="in")
+	ax10.set_title(r"Average number of tics: "+str(np.mean(numTics)))
+	#ax10.set_ylim(0, 1)
+	#ax10.set_xlim(0.5, len(lista_clicks)+0.5)
+	savefig("results/esperaDobleTic_"+dist+"_test_"+str(escalado)+"_masTest.pdf",bbox_inches='tight')
+	#show()
 
 
-
-
-def resuelveR(mediaK_1clk, stdK_1clk, ejeX, fdpK):
-
-	k1 = ejeX[int(len(ejeX)/2)]
-	pk1 = fdpK[int(len(ejeX)/2)]
-	k2 = ejeX[int(len(ejeX)/3)]
-	pk2 = fdpK[int(len(ejeX)/3)]
-
-	def func(x):
-		return [pk1 - 0.5*(erf(  1/(np.sqrt(2)*np.sqrt(k1)) * (x[0]-k1*x[1]) )-erf(  1/(np.sqrt(2)*np.sqrt(k1+1)) * (x[0]-(k1+1)*x[1]) )),
-				pk2 - 0.5*(erf(  1/(np.sqrt(2)*np.sqrt(k2)) * (x[0]-k2*x[1]) )-erf(  1/(np.sqrt(2)*np.sqrt(k2+1)) * (x[0]-(k2+1)*x[1]) )),]
-
-	root = fsolve(func, [t_fin/params[1], params[0]/params[1]])
-	return(root)
 
 
 
 def plotter(x,y,titulo):
 	fig, ax10 = subplots()
 	ax10.plot(x,y)
-	ax10.hlines(y=mu/std,xmin=x[0],xmax=x[-1], linestyle = '--', color='r')
+	ax10.plot(x,y,'x')
+	ax10.hlines(y=(mu/std)**2,xmin=x[0],xmax=x[-1], linestyle = '--', color='r')
 	ax10.set_ylabel(r"Computed $R^{(1)}$")
 	ax10.set_xlabel(r"Number of Clocks")
 	ax10.grid()
@@ -144,13 +149,13 @@ def plotter(x,y,titulo):
 	ax10.yaxis.set_major_locator(MaxNLocator(6))
 	ax10.xaxis.set_minor_locator(AutoMinorLocator())
 	ax10.yaxis.set_minor_locator(AutoMinorLocator())
-	ax10.set_title("Average: "+str(mu)+"  Std: "+str(std)+"  t_0:"+str(t_fin))
+	ax10.set_title(r"$\mu$: "+str(mu)+"  $\sigma$: "+str(std)+"  $t_0$: "+str(t_fin))
+	#ax10.set_title("Average: "+str(mu)+"  Std: "+str(std)+"  N:"+str(N))
 	ax10.tick_params(axis='both', which='both', direction="in")
 	ax10.set_xlim(x[0],x[-1])
-	ax10.set_ylim(2*2/3,2*3/2)
-	#ax10.set_xscale('log')
-	ax10.set_yscale('log')
-	
+	ax10.set_ylim(4/0.25,4*0.25)
+	ax10.set_xscale('log')
+	#ax10.set_yscale('log')
 	savefig("results/"+titulo+".pdf",bbox_inches='tight')
 	show()
 
@@ -174,6 +179,8 @@ def main():
 	plotter_registro(t, N, registro)
 	plotter_lista_clicks(N, lista_clicks)
 	'''
+
+
 	'''
 	#LIMCENT
 
@@ -214,14 +221,53 @@ def main():
 	'''
 
 
-	
+	'''
 	ss = sweep_simulations()
-	Ns = [1,2,4,8,16,32,64,128,256,512]#, 1024, 2048]
-
-	Rs = ss.sweep_N(Ns, t_fin, mu, std)
-
+	
+	Ns = [2,4,8,16,32,64,128,256,512,1024]#,2048]
+	#Rs = ss.sweep_N(Ns, t_fin, mu, std)
 	R = np.load('outN.npy')
-	plotter(Ns, R[1,:], "N_sweep")
+	plotter(Ns, R[0,:], "N_sweep")
+	'''
+
+	'''
+	t0s = [4,8,16,32,64,128,256,512,1024]
+	#Rs = ss.sweep_t0(N, t0s, mu, std)
+	R = np.load('outt.npy')
+	plotter(t0s, R[1,:], "t0_sweep")
+	'''
+
+
+
+
+
+	
+	#prueba doble tick no converge
+	nsim = N
+	t0 = t_fin
+
+	dt = dostics_simulations()
+	ks = dt.dostics(nsim, t0, mu, std, dist)
+	mm = np.mean(ks[:,2])+np.mean(ks[:,4]**2)/std**2+np.mean(2*std*np.sqrt(ks[:,0])*ks[:,1]*ks[:,4])/std**2-np.mean(ks[:,4])**2/std**2
+	print(" ")
+	print(" ")
+	print("**********************")
+
+	print("Debug")
+	print(np.mean(ks[:,4]))
+
+	print(" ")
+	print(np.mean((ks[:,5]-mu*ks[:,4])**2))
+	#print(np.mean(ks[:,5]**2) + mu**2/2 - 2*mu*np.sum((ks[:,4]==1)*ks[:,5])/len(ks[:,5]))
+	print(np.nanmean((np.sqrt(ks[:,0])*std*ks[:,1])**2)/2)
+
+	print(" ")
+	print("Real:", np.mean(ks[:,0]))
+	print("Teoría tiempo parada:", np.mean((ks[:,5]-mu*ks[:,4])**2)/std**2)
+	print("Desarrollo teoría antes de TLC:", np.mean(ks[:,5]**2) + mu**2/2 - 2*mu*np.sum((ks[:,4]==1)*ks[:,5])/len(ks[:,5]))
+	print("Mi intento:", np.nanmean(ks[:,0]*ks[:,1]**2)/2)
+	plotDobleTics(ks[:,0])
+	
 
 if __name__ == "__main__":
 	main()

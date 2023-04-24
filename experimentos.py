@@ -12,8 +12,12 @@ class experimento_logbook():
 		match dist:
 			case "normal":
 				self.fdp = lambda: np.random.default_rng().normal(params[0], params[1])
+			case "uniform":
+				self.fdp = lambda: np.random.default_rng().uniform(params[0]-np.sqrt(12)/2*params[1], params[0]+np.sqrt(12)/2*params[1])
 			case"beta":
 				self.fdp = lambda: np.random.default_rng().beta(params[0], params[1])
+			case "geometric":
+				self.fdp = lambda: np.random.default_rng().geometric(params[0])
 			case "exponential":
 				self.fdp = lambda: np.random.default_rng().exponential(params[0])
 			case "poisson":
@@ -36,7 +40,7 @@ class experimento_logbook():
 
 	def ini_RelojesFraccion(self):
 
-		t0s = np.linspace(0,self.params[0],self.N)		#inicializo un reloj cada media(tic)/N tiempo
+		t0s = np.linspace(0,self.params[0],self.N+1)		#inicializo un reloj cada media(tic)/N tiempo
 		for i in range(self.N):
 			self.relojesQ.append(relojq(self.fdp, self.t, t0s[i]))
 
@@ -61,7 +65,6 @@ class experimento_logbook():
 		for reloj in self.relojesQ:
 			[t_ticsR, intervalosR, registroR] = reloj.run()
 
-			
 			t_tics.append(t_ticsR)
 			intervalos.append(intervalosR)
 			registro.append(registroR)

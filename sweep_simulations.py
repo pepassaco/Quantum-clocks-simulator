@@ -16,6 +16,21 @@ import numpy as np
 
 class sweep_simulations:
 
+	def printProgressBar(self,value,label):
+		n_bar = 40 #size of progress bar
+		max = 100
+		j= value/max
+		sys.stdout.write('\r')
+		bar = '█' * int(n_bar * j)
+		bar = bar + '-' * int(n_bar * (1-j))
+
+		sys.stdout.write(f"{label.ljust(10)} | [{bar:{n_bar}s}] {int(100 * j)}% ")
+		sys.stdout.flush()
+
+
+
+
+
 	def calcula_estadisticos(self, N, registro):
 		numTics = np.zeros(N, dtype=float)
 		for i in range(N):
@@ -24,39 +39,39 @@ class sweep_simulations:
 		mediaK = np.mean(numTics)
 		stdK = np.std(numTics)
 
-		#mediaK_1clk = mediaK
-		#stdK_1clk = stdK/np.sqrt(N)
+		if(N == 1024):
+			self.plotKs(numTics, mediaK, stdK)
+		return(mediaK, stdK)
 
-		#ejeX_1clk = np.linspace(int(mediaK_1clk)-3*int(stdK_1clk), int(mediaK_1clk)+3*int(stdK_1clk), 100)
-		#fdpK_1clk = stats.norm.pdf(ejeX, mediaK_1clk, stdK_1clk)
-		
+
+	def plotKs(self, numTics, mediaK, stdK):
+
+
+		misBins = np.arange(int(mediaK)-3*int(stdK), int(mediaK)+3*int(stdK))
 		ejeX = np.linspace(int(mediaK)-3*int(stdK), int(mediaK)+3*int(stdK), 100)
-		fdpK = stats.norm.pdf(ejeX, mediaK, stdK)
 
-		return(mediaK, stdK, ejeX, fdpK)
-
-
-
-	def resuelveR(self, mediaK_1clk, stdK_1clk, ejeX, fdpK, t_fin, params):
-
-		k1 = ejeX[int(len(ejeX)/2)]
-		pk1 = fdpK[int(len(ejeX)/2)]
-		k2 = ejeX[int(len(ejeX)/3)]
-		pk2 = fdpK[int(len(ejeX)/3)]
-
-		def func(x):
-			return [pk1 - 0.5*(erf(  1/(np.sqrt(2)*np.sqrt(k1)) * (x[0]-k1*x[1]) )-erf(  1/(np.sqrt(2)*np.sqrt(k1+1)) * (x[0]-(k1+1)*x[1]) )),
-					pk2 - 0.5*(erf(  1/(np.sqrt(2)*np.sqrt(k2)) * (x[0]-k2*x[1]) )-erf(  1/(np.sqrt(2)*np.sqrt(k2+1)) * (x[0]-(k2+1)*x[1]) )),]
-
-		root = fsolve(func, [t_fin/params[1], params[0]/params[1]])
-		return(root)
-
+		fig, ax10 = subplots()
+		ax10.hist(numTics, bins=misBins, density = True)  # arguments are passed to np.histogram
+		ax10.plot(ejeX, stats.norm.pdf(ejeX, mediaK, stdK))
+		ax10.set_ylabel(r"Density")
+		ax10.set_xlabel(r"Number of tics")
+		for item in ([ax10.title, ax10.xaxis.label, ax10.yaxis.label] + ax10.get_xticklabels() + ax10.get_yticklabels()):
+		      item.set_fontsize(12)
+		ax10.xaxis.set_major_locator(MaxNLocator(6))
+		ax10.yaxis.set_major_locator(MaxNLocator(6))
+		ax10.xaxis.set_minor_locator(AutoMinorLocator())
+		ax10.yaxis.set_minor_locator(AutoMinorLocator())
+		ax10.tick_params(axis='both', which='both', direction="in")
+		ax10.set_title(r"std: "+str(stdK))
+		#ax10.set_ylim(0, 1)
+		#ax10.set_xlim(0.5, len(lista_clicks)+0.5)
+		show()
 
 
 	def sweep_N(self, Ns, t0, mu, std):
 
 		params = [mu, std]
-		t_fin = 501
+		t_fin = t0
 		t_res = std/2
 		dist = "normal"
 
@@ -68,9 +83,15 @@ class sweep_simulations:
 			exp = experimento_logbook(t, N, dist, params)
 			exp.ini_RelojesSimultaneos()
 			[t_tics, intervalos, registro, lista_clicks] = exp.run()
-			[mediaK, stdK, ejeX, fdpK] = self.calcula_estadisticos(N, registro)
-			Rs[:,i] = self.resuelveR(mediaK, stdK, ejeX, fdpK, t_fin, params)
+			[mediaK, stdK] = self.calcula_estadisticos(N, registro)
+			Rs[:,i] = [mediaK/stdK**2, 0]
+
+			print("-----")
+			print(mediaK, stdK)
+			print(N, Rs[0,i])
 			i+=1
+			
+			#self.printProgressBar(int(i/nsim*100), "Completado")
 
 		np.save('outN.npy', Rs)
     
@@ -78,6 +99,26 @@ class sweep_simulations:
 		return(Rs)
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+	#AUN POR CORREGIR
 	def sweep_t0(self, N, t0s, mu, std):
 
 		params = [mu, std]
@@ -97,7 +138,8 @@ class sweep_simulations:
 			[mediaK, stdK, ejeX, fdpK] = self.calcula_estadisticos(N, registro)
 			Rs[:,i] = self.resuelveR(mediaK, stdK, ejeX, fdpK, t_fin, params)
 			i+=1
-
+			print(t_fin)
+		np.save('outt.npy', Rs)
 		return(Rs)
 
 
